@@ -49,10 +49,6 @@ def search_craigslist(url):
                 #   'http://greensboro.craigslist.org/tag/4519759135.html'
                 if 'http' not in link.get('href'):
                     posts.append(post)
-                # TODO - For each post, check if it is in the database, if not, add to send-list
-                # TODO -- filter pattern? 
-                    
-    pprint(posts)
     return posts
 
 if __name__ == '__main__':
@@ -60,6 +56,7 @@ if __name__ == '__main__':
     #  - Search for the query (should be a separate function)
     posts_dict = search_craigslist(FULL_URL)
     #  - For each post, check if it is in the database, if not, add to send-list
+    
     #  - Scrape the posts into a dict (should be a separate (this?) function)
     #  - if headline or body matches a key word, perhaps bold the entry? or send
     #    right away
