@@ -3,14 +3,15 @@
 # Ben Osment
 # Sat Jun 21 09:15:05 2014
 
-"""Craigslit Alert
+"""
+   Craigslist Alert
    Scraps Craigslist and alerts if any new posts (matching a set of critera) have
    been posted
 """
 
 import requests
 from bs4 import BeautifulSoup
-from pprint import pprint
+import argparse
 
 # base URL for Raleigh, NC
 BASE_URL = 'http://raleigh.craigslist.org'
@@ -19,18 +20,38 @@ BASE_URL = 'http://raleigh.craigslist.org'
 CATEGORY = 'taa'
 
 # what to search for
+# TODO - what about if the query is two words? 
 QUERY = 'lego'
 
 # Should form something like the following:
 #   http://raleigh.craigslist.org/search/taa?query=lego
 FULL_URL = BASE_URL + '/search/' + CATEGORY + '?query=' + QUERY
 
+def parse_args():
+    '''Builds parser and parses the CLI options'''
+    parser = argparse.ArgumentParser(description='Scraps Craigslist and alerts if any' \
+                                     ' new posts (matching a set of critera) have been posted')
+    parser.add_argument('query', action='store', nargs='+',
+                        help='search value')
+    parser.add_argument('--location', help='what local Craigslist to search?',
+                        action='store', required=False, default='raleigh')
+    parser.add_argument('--category', help='what category to search?',
+                        action='store', required=False, default='taa')
+    parser.add_argument('--db', help='which database to use?',
+                        action='store', required=False, default='results.db')
+    return parser.parse_args()
 
+def craigslist_alert(args):
+    print(args)
+    
 def search_craigslist(url):
     """ Search for a given query on Craigslist.
         Returns a list of dictionaries representing the posts"""
     # get the raw HTML page
     response = requests.get(url)
+    with open('actual-response.html', 'wb') as f:
+        f.write(response.content)
+    
     # parse the HTML
     soup = BeautifulSoup(response.content)
     ps = soup.find_all('p', {'class':'row'})
@@ -52,9 +73,11 @@ def search_craigslist(url):
     return posts
 
 if __name__ == '__main__':
+    args = parse_args()
+    craigslist_alert(args)
     # Outline:
     #  - Search for the query (should be a separate function)
-    posts_dict = search_craigslist(FULL_URL)
+    #posts = search_craigslist(FULL_URL)
     #  - For each post, check if it is in the database, if not, add to send-list
     
     #  - Scrape the posts into a dict (should be a separate (this?) function)
