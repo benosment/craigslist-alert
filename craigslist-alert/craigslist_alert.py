@@ -13,19 +13,41 @@ import requests
 from bs4 import BeautifulSoup
 import argparse
 
-# base URL for Raleigh, NC
-BASE_URL = 'http://raleigh.craigslist.org'
 
-# category -- toys and games
-CATEGORY = 'taa'
+class Craigslist():
+    def __init__(self, location='raleigh'):
+        self.base_url = 'http://{}.craigslist.org'.format(location)
 
-# what to search for
-# TODO - what about if the query is two words? 
-QUERY = 'lego'
+    def form_query(self, query, category):
+        '''returns a URL for searching craigslist'''
+        return self.base_url + '/search/' + category + '?query=' + '+'.join(query)
 
-# Should form something like the following:
-#   http://raleigh.craigslist.org/search/taa?query=lego
-FULL_URL = BASE_URL + '/search/' + CATEGORY + '?query=' + QUERY
+    def search(self, query, category='taa'):
+        ''' Search for a given query on Craigslist.
+        Returns a list of dictionaries representing the posts'''
+        url = self.form_query(query, category)
+        response = requests.get(url)
+        # parse the HTML
+        soup = BeautifulSoup(response.content)
+        ps = soup.find_all('p', {'class':'row'})
+        posts = []
+        for p in ps:
+            links = p.find_all('a')
+            for link in links:
+                if not link.has_attr('class'):
+                    post = {}
+                    post['link'] = self.base_url + link.get('href')
+                    post['title'] = link.get_text()
+                    # filter out any non-local posts
+                    # local posts will have a relative URL like:
+                    #   '/tag/4460564352.html'
+                    # but 'nearby' posts will have a full URL like:
+                    #   'http://greensboro.craigslist.org/tag/4519759135.html'
+                    if 'http' not in link.get('href'):
+                        posts.append(post)
+        return posts
+
+    
 
 def parse_args():
     '''Builds parser and parses the CLI options'''
@@ -41,36 +63,10 @@ def parse_args():
                         action='store', required=False, default='results.db')
     return parser.parse_args()
 
+
 def craigslist_alert(args):
     print(args)
-    
-def search_craigslist(url):
-    """ Search for a given query on Craigslist.
-        Returns a list of dictionaries representing the posts"""
-    # get the raw HTML page
-    response = requests.get(url)
-    with open('actual-response.html', 'wb') as f:
-        f.write(response.content)
-    
-    # parse the HTML
-    soup = BeautifulSoup(response.content)
-    ps = soup.find_all('p', {'class':'row'})
-    posts = []
-    for p in ps:
-        links = p.find_all('a')
-        for link in links:
-            if not link.has_attr('class'):
-                post = {}
-                post['link'] = BASE_URL + link.get('href')
-                post['title'] = link.get_text()
-                # filter out any non-local posts
-                # local posts will have a relative URL like:
-                #   '/tag/4460564352.html'
-                # but 'nearby' posts will have a full URL like:
-                #   'http://greensboro.craigslist.org/tag/4519759135.html'
-                if 'http' not in link.get('href'):
-                    posts.append(post)
-    return posts
+    #cl = Craigslist(**args)
 
 if __name__ == '__main__':
     args = parse_args()

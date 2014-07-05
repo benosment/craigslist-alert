@@ -51,16 +51,16 @@ bad_mock.content = no_results_response
 
 class TestQuery(unittest.TestCase):
     def setUp(self):
-        cl = Craigslist(location='raleigh')
+        self.cl = Craigslist(location='raleigh')
         
     def test_basic_query(self):
         ''' Verify query formation with a single word'''
-        self.assertEquals(cl.form_query('lego', category='taa'),
+        self.assertEqual(self.cl.form_query(['lego'], category='taa'),
                           'http://raleigh.craigslist.org/search/taa?query=lego')
     
     def test_advanced_query(self):
         ''' Verify query formation with more than one word'''
-        self.assertEquals(cl.form_query('lego 10225', category='taa'),
+        self.assertEqual(self.cl.form_query(['lego', '10225'], category='taa'),
                           'http://raleigh.craigslist.org/search/taa?query=lego+10225')
 
     
@@ -84,9 +84,6 @@ class TestSearch(unittest.TestCase):
         self.assertEqual(self.posts[0]['link'],
                          'http://raleigh.craigslist.org/tad/4515121161.html')
 
-    def test_advanced_query(self):
-        ''' verify query formation with more than one word'''
-        pass
 
 class TestSearchNegative(unittest.TestCase):
 
