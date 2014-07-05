@@ -17,7 +17,7 @@ tests_dir = os.path.join(current_dir, 'tests')
 # add the source directory to the load path
 sys.path.append(src_dir)
 
-import craigslist_alert
+from craigslist_alert import Craigslist
 
 
 """
@@ -26,9 +26,7 @@ Pre-Test
  - store a slightly modified page
 
 Tests
- - verify non-local?
  - verify 404 exception path
- - verify no results path
  - verify download link
  - verify content of downloaded link
  - verify entry into database
@@ -53,15 +51,15 @@ bad_mock.content = no_results_response
 
 class TestQuery(unittest.TestCase):
     def setUp(self):
-        cl = new Craigslist(location='raleigh')
+        cl = Craigslist(location='raleigh')
         
     def test_basic_query(self):
-        ''' verify query formation with a single word'''
+        ''' Verify query formation with a single word'''
         self.assertEquals(cl.form_query('lego', category='taa'),
                           'http://raleigh.craigslist.org/search/taa?query=lego')
     
     def test_advanced_query(self):
-        ''' verify query formation with more than one word'''
+        ''' Verify query formation with more than one word'''
         self.assertEquals(cl.form_query('lego 10225', category='taa'),
                           'http://raleigh.craigslist.org/search/taa?query=lego+10225')
 
@@ -70,19 +68,19 @@ class TestSearch(unittest.TestCase):
     
     @patch('requests.get', return_value=good_mock)
     def setUp(self, mock_requests_get):
-        cl = new Craigslist(location='raleigh')
+        cl = Craigslist(location='raleigh')
         self.posts = cl.search('')
 
     def test_post_count(self):
-        ''' verify count of posts returned'''
+        ''' Verify count of posts returned'''
         self.assertEqual(len(self.posts), 86)
 
     def test_post_headline(self):
-        ''' verify post headline'''
+        ''' Verify post headline'''
         self.assertEqual(self.posts[0]['title'], 'Buy, Sell, Trade & RENT Lego!')
 
     def test_post_link(self):
-        ''' verify post link'''
+        ''' Verify post link'''
         self.assertEqual(self.posts[0]['link'],
                          'http://raleigh.craigslist.org/tad/4515121161.html')
 
@@ -94,18 +92,20 @@ class TestSearchNegative(unittest.TestCase):
 
     @patch('requests.get', return_value=bad_mock)
     def setUp(self, mock_requests_get):
-        cl = new Craigslist(location='raleigh')
+        cl = Craigslist(location='raleigh')
         self.posts = cl.search('')
 
     def test_post_count(self):
-        ''' verify no posts returned'''
+        ''' Verify no posts returned'''
         self.assertEqual(len(self.posts), 0)
 
 
 class TestPost(unittest.TestCase):
+    '''Verify content of post'''
     pass
     
 class TestAdd(unittest.TestCase):
+    '''Verify post gets added to DB'''
     pass
     
 if __name__ == '__main__':
