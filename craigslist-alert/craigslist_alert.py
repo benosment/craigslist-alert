@@ -15,20 +15,29 @@ import argparse
 
 
 class Craigslist():
-    def __init__(self, location='raleigh'):
+    def __init__(self, location):
         self.base_url = 'http://{}.craigslist.org'.format(location)
 
     def form_query(self, query, category):
         '''returns a URL for searching craigslist'''
-        return self.base_url + '/search/' + category + '?query=' + '+'.join(query)
+        return '{}/search/{}?query={}'.format(self.base_url, category, '+'.join(query))
 
     def search(self, query, category='taa'):
-        ''' Search for a given query on Craigslist.
-        Returns a list of dictionaries representing the posts'''
-        url = self.form_query(query, category)
-        response = requests.get(url)
-        # parse the HTML
-        soup = BeautifulSoup(response.content)
+        ''' Search for a given query on Craigslist.'''
+        search_result = requests.get(self.form_query(query, category))
+        posts = self.parse_search_results(search_result.content)
+        # TODO -- maybye just make list of links? Can get title from next page
+        for post in posts:
+            # TODO -- check if in database first (URL is assumed to be unique)
+            # if not self.is_duplicate(post)
+            #parse_listing(post['link'])
+            page = requests.get(post['link'])
+            with open('page_sample.html', 'wb') as f:
+                f.write(page.content)
+        
+    def parse_search_results(self, search_results):
+        '''Parse the search results into a list of dictionaries representing the post'''
+        soup = BeautifulSoup(search_results)
         ps = soup.find_all('p', {'class':'row'})
         posts = []
         for p in ps:
@@ -47,7 +56,16 @@ class Craigslist():
                         posts.append(post)
         return posts
 
-    
+    def parse_post(self, post):
+        '''Parse an individual post'''
+        # TODO - should this be an object as well? 
+        pass
+
+    def is_duplicate(self, link):
+        '''Returns True if the post already exists within the database,
+           Returns False otherwise'''
+        return False
+
 
 def parse_args():
     '''Builds parser and parses the CLI options'''
@@ -65,8 +83,8 @@ def parse_args():
 
 
 def craigslist_alert(args):
-    print(args)
-    #cl = Craigslist(**args)
+    cl = Craigslist(args.location)
+    cl.search(args.query, args.category)
 
 if __name__ == '__main__':
     args = parse_args()

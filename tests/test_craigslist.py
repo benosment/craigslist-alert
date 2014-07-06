@@ -6,7 +6,6 @@
 """Unit tests for craigslist_aleart.py"""
 
 import unittest
-from unittest.mock import patch, Mock
 import sys
 import os
 
@@ -37,18 +36,6 @@ Tests
  - verify bold email for certain keywords
 """
 
-with open(os.path.join(tests_dir, 'sample-query.html'), 'rb') as f:
-    good_response = f.read()
-    
-with open(os.path.join(tests_dir, 'no-results.html'), 'rb') as f:
-    no_results_response = f.read()
-
-good_mock = Mock()
-good_mock.content = good_response
-
-bad_mock = Mock()
-bad_mock.content = no_results_response
-
 class TestQuery(unittest.TestCase):
     def setUp(self):
         self.cl = Craigslist(location='raleigh')
@@ -64,12 +51,14 @@ class TestQuery(unittest.TestCase):
                           'http://raleigh.craigslist.org/search/taa?query=lego+10225')
 
     
-class TestSearch(unittest.TestCase):
+class TestSearchResults(unittest.TestCase):
     
-    @patch('requests.get', return_value=good_mock)
-    def setUp(self, mock_requests_get):
+    def setUp(self):
+        with open(os.path.join(tests_dir,
+                               'sample-query-results.html'), 'rb') as f:
+            sample_results = f.read()
         cl = Craigslist(location='raleigh')
-        self.posts = cl.search('')
+        self.posts = cl.parse_search_results(sample_results)
 
     def test_post_count(self):
         ''' Verify count of posts returned'''
@@ -85,12 +74,14 @@ class TestSearch(unittest.TestCase):
                          'http://raleigh.craigslist.org/tad/4515121161.html')
 
 
-class TestSearchNegative(unittest.TestCase):
+class TestSearchResultsNegative(unittest.TestCase):
 
-    @patch('requests.get', return_value=bad_mock)
-    def setUp(self, mock_requests_get):
+    def setUp(self):
+        with open(os.path.join(tests_dir,
+                               'sample-no-results.html'), 'rb') as f:
+            no_results = f.read()
         cl = Craigslist(location='raleigh')
-        self.posts = cl.search('')
+        self.posts = cl.parse_search_results(no_results)
 
     def test_post_count(self):
         ''' Verify no posts returned'''
@@ -98,8 +89,26 @@ class TestSearchNegative(unittest.TestCase):
 
 
 class TestPost(unittest.TestCase):
-    '''Verify content of post'''
-    pass
+    
+    def setUp(self):
+        with open(os.path.join(tests_dir,
+                               'sample-post.html'), 'rb') as f:
+            sample_results = f.read()
+        cl = Craigslist(location='raleigh')
+        self.post = cl.parse_post(sample_results)
+
+    def test_post_id(self):
+        '''Verify post's ID'''
+        self.assertEqual(self.post.id, 4510309330)
+
+    def test_post_title(self):
+        '''Verify post's title'''
+        self.assertEqual(self.post.title, "LEGO Quatro Megablocks ")
+
+    def test_post_description(self):        
+        self.assertEqual(self.post.description,
+                         '''Box of LEGO Quatro Megablocks. Great for all ages,
+                         keeps children quiet and busy for a long time. ''')
     
 class TestAdd(unittest.TestCase):
     '''Verify post gets added to DB'''
