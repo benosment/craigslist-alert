@@ -10,6 +10,7 @@
 """
 
 import requests
+import re
 from bs4 import BeautifulSoup
 import argparse
 
@@ -29,7 +30,7 @@ class Craigslist():
         # TODO -- maybye just make list of links? Can get title from next page
         for post in posts:
             # TODO -- check if in database first (URL is assumed to be unique)
-            # if not self.is_duplicate(post)
+            # if not self.is_duplicate(url_to_id(post[link]))
             p = self.parse_post((post['link']))
         
     def parse_search_results(self, search_results):
@@ -59,8 +60,7 @@ class Craigslist():
         soup = BeautifulSoup(page.content)
         id = self.url_to_id(url)
         title = soup.title.text
-        description = soup.find_all('meta', {'name':'description'})
-        #import pdb; pdb.set_trace()
+        description = self.extract_description(soup.find_all('meta', {'name':'description'}))
         return Post(id, title, description)
 
     def is_duplicate(self, link):
@@ -72,9 +72,22 @@ class Craigslist():
         '''URL is of the form: http://raleigh.craigslist.org/tag/4554496580.html
         The last portion is assumed to be a unique id
         '''
+        # split to the last segment of the URL
         last_segment = url.split('/')[-1]
+        # remove the trailing .html
         id = last_segment.split('.')[0]
         return int(id)
+
+    def extract_description(self, meta_tag):
+        '''BS4 returns a value like:
+            <meta content="Box of LEGO Quatro Megablocks. Great for all ages, keeps children quiet and busy for a long time. " name="description"/>
+
+        Return just the value in the content section
+        '''
+        pattern = re.compile(r'.*content=\"(?P<desc>.*)\" ')
+        match = re.match(pattern, str(meta_tag))
+        return match.group('desc')
+
 
 class Post():
     '''Represents an individual Craigslist post'''

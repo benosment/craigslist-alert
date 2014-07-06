@@ -113,8 +113,7 @@ class TestPost(unittest.TestCase):
 
     def test_post_description(self):        
         self.assertEqual(self.post.description,
-                         '''Box of LEGO Quatro Megablocks. Great for all ages,
-                         keeps children quiet and busy for a long time. ''')
+                         'Box of LEGO Quatro Megablocks. Great for all ages, keeps children quiet and busy for a long time. ')
     
 class TestAdd(unittest.TestCase):
     '''Verify post gets added to DB'''
