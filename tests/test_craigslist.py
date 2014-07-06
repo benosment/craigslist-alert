@@ -8,6 +8,7 @@
 import unittest
 import sys
 import os
+from unittest.mock import Mock, patch
 
 current_dir = os.getcwd()
 src_dir = os.path.join(current_dir, 'craigslist-alert')
@@ -89,13 +90,18 @@ class TestSearchResultsNegative(unittest.TestCase):
 
 
 class TestPost(unittest.TestCase):
-    
-    def setUp(self):
-        with open(os.path.join(tests_dir,
-                               'sample-post.html'), 'rb') as f:
-            sample_results = f.read()
+
+    with open(os.path.join(tests_dir,
+                           'sample-post.html'), 'rb') as f:
+        sample_post = f.read()
+
+    page_mock = Mock()
+    page_mock.content = sample_post
+
+    @patch('requests.get', return_value=page_mock)
+    def setUp(self, page_mock):
         cl = Craigslist(location='raleigh')
-        self.post = cl.parse_post(sample_results)
+        self.post = cl.parse_post('http://raleigh.craigslist.org/tag/4510309330.html')
 
     def test_post_id(self):
         '''Verify post's ID'''

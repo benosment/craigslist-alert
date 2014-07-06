@@ -30,10 +30,7 @@ class Craigslist():
         for post in posts:
             # TODO -- check if in database first (URL is assumed to be unique)
             # if not self.is_duplicate(post)
-            #parse_listing(post['link'])
-            page = requests.get(post['link'])
-            with open('page_sample.html', 'wb') as f:
-                f.write(page.content)
+            p = self.parse_post((post['link']))
         
     def parse_search_results(self, search_results):
         '''Parse the search results into a list of dictionaries representing the post'''
@@ -56,17 +53,37 @@ class Craigslist():
                         posts.append(post)
         return posts
 
-    def parse_post(self, post):
+    def parse_post(self, url):
         '''Parse an individual post'''
-        # TODO - should this be an object as well? 
-        pass
+        page = requests.get(url)
+        soup = BeautifulSoup(page.content)
+        id = self.url_to_id(url)
+        title = soup.title.text
+        description = soup.find_all('meta', {'name':'description'})
+        #import pdb; pdb.set_trace()
+        return Post(id, title, description)
 
     def is_duplicate(self, link):
         '''Returns True if the post already exists within the database,
            Returns False otherwise'''
         return False
 
+    def url_to_id(self, url):
+        '''URL is of the form: http://raleigh.craigslist.org/tag/4554496580.html
+        The last portion is assumed to be a unique id
+        '''
+        last_segment = url.split('/')[-1]
+        id = last_segment.split('.')[0]
+        return int(id)
 
+class Post():
+    '''Represents an individual Craigslist post'''
+    def __init__(self, id, title, description):
+        self.id = id
+        self.title = title
+        self.description = description
+
+        
 def parse_args():
     '''Builds parser and parses the CLI options'''
     parser = argparse.ArgumentParser(description='Scraps Craigslist and alerts if any' \
