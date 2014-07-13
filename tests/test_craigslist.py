@@ -102,7 +102,7 @@ class TestPost(unittest.TestCase):
 
     def test_post_id(self):
         '''Verify post's ID'''
-        self.assertEqual(self.post.id, 4510309330)
+        self.assertEqual(self.post.id, '4510309330')
 
     def test_post_title(self):
         '''Verify post's title'''
@@ -117,29 +117,29 @@ class TestAdd(unittest.TestCase):
     def setUp(self):
         # create a sample file with an entry
         with open('test-history', 'w') as f:
-            f.write('4510309329')
-        self.cl = Craigslist(location='raleigh', history='test_history')
+            f.write('4510309329\n')
+        self.cl = Craigslist(location='raleigh', history='test-history')
         self.posts = [Post('4510309329', 'Lego Star Wars', '', ''),
                       Post('4510309330', 'Lego R2-D2', '', ''),
                       Post('4510309331', 'Megablocks for sell', '', '')]
 
     def test_filter_old(self):
-        '''Verify a post that exists in the file is filtered out'''
-        new_posts = [Post('4510309330', 'Lego R2-D2', '', ''),
-                     Post('4510309331', 'Megablocks for sell', '', '')]
+        '''Verify old posts are filtered out'''
+        new_posts = self.posts[1:] # don't include first item
         self.assertEqual(self.cl.filter_old(self.posts), new_posts)
 
     def test_filter_blacklist(self):
-        '''Verify a post that has certains words is filtered out'''
-        filtered_posts = [Post('4510309329', 'Lego Star Wars', '', ''),
-                          Post('4510309330', 'Lego R2-D2', '', '')]
-        self.assertEqual(self.cl.filter_old(self.posts), filtered_posts)
+        '''Verify a post that contains certain words is filtered out'''
+        filtered_posts = self.posts[:-1] # don't include last item
+        self.assertEqual(self.cl.filter_blacklist(self.posts), filtered_posts)
 
     def test_history(self):
         '''Verify non-blacklist items are written to history file'''
-        self.cl.save_history(self.cl.filter_old(self.posts))
+        self.cl.save_history(self.cl.filter_blacklist(self.posts))
         with open(self.cl.history_filename) as f:
-            content = f.readlines()
+            content = []
+            for line in f.readlines():
+                content.append(line.strip())
         self.assertEqual(content, ['4510309329', '4510309330'])
     
     

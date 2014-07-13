@@ -19,17 +19,21 @@ class Craigslist():
     def __init__(self, location, history='history', blacklist='blacklist'):
         self.base_url = 'http://{}.craigslist.org'.format(location)
         self.history_filename = history
+        self.history = []
+        self.blacklist = []        
         try:
             with open(history, 'r') as f:
-                self.history = f.readlines()
+                for line in f.readlines():
+                    self.history.append(line.strip())
         except FileNotFoundError:
             # may occur the first time the program is being run
-            self.history = []
+            pass
         try:                
             with open(blacklist, 'r') as f:
-                self.blacklist = f.readlines()
+                for line in f.readlines():
+                    self.blacklist.append(line.strip())
         except FileNotFoundError:
-            self.blacklist = []
+            pass
             
     def form_query(self, query, category):
         '''returns a URL for searching craigslist'''
@@ -83,7 +87,10 @@ class Craigslist():
     def filter_blacklist(self, posts):
         filtered_posts = []
         for post in posts:
-            if not self.blacklist in post.title:
+            for item in self.blacklist:
+                if item in post.title.lower():
+                    break
+            else:
                 filtered_posts.append(post)
         return filtered_posts
 
@@ -105,8 +112,7 @@ class Craigslist():
     def save_history(self, posts):
         with open(self.history_filename, 'w') as f:
             for p in posts:
-                f.write(p.link)
-        
+                f.write('%s\n' % p.id)
 
     def url_to_id(self, url):
         '''URL is of the form: http://raleigh.craigslist.org/tag/4554496580.html
@@ -116,7 +122,7 @@ class Craigslist():
         last_segment = url.split('/')[-1]
         # remove the trailing .html
         id = last_segment.split('.')[0]
-        return int(id)
+        return id
 
     def extract_description(self, meta_tag):
         '''BS4 returns a value like:
@@ -136,8 +142,11 @@ class Post():
         self.title = title
         self.description = description
         self.link = link
-
         
+    def __repr__(self):
+        return 'Post %s: %s' % (self.id, self.title)
+
+
 def parse_args():
     '''Builds parser and parses the CLI options'''
     parser = argparse.ArgumentParser(description='Scraps Craigslist and alerts if any' \
