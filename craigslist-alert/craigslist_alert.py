@@ -16,9 +16,21 @@ import argparse
 
 
 class Craigslist():
-    def __init__(self, location):
+    def __init__(self, location, history='history', blacklist='blacklist'):
         self.base_url = 'http://{}.craigslist.org'.format(location)
-
+        self.history_filename = history
+        try:
+            with open(history, 'r') as f:
+                self.history = f.readlines()
+        except FileNotFoundError:
+            # may occur the first time the program is being run
+            self.history = []
+        try:                
+            with open(blacklist, 'r') as f:
+                self.blacklist = f.readlines()
+        except FileNotFoundError:
+            self.blacklist = []
+            
     def form_query(self, query, category):
         '''returns a URL for searching craigslist'''
         return '{}/search/{}?query={}'.format(self.base_url, category, '+'.join(query))
@@ -26,33 +38,38 @@ class Craigslist():
     def search(self, query, category='taa'):
         ''' Search for a given query on Craigslist.'''
         search_result = requests.get(self.form_query(query, category))
-        posts = self.parse_search_results(search_result.content)
-        # TODO -- maybye just make list of links? Can get title from next page
-        for post in posts:
-            # TODO -- check if in database first (URL is assumed to be unique)
-            # if not self.is_duplicate(url_to_id(post[link]))
-            p = self.parse_post((post['link']))
-        
+        links = self.parse_search_results(search_result.content)
+        posts = []
+        for link in links:
+            posts.append(self.parse_post(link))
+        # Posts will contain all the posts.
+        # We want to filter out any posts that have words in the blacklist first.
+        posts = self.filter_blacklist(posts)
+        # Then we check if any are new (by comparing the history from the last run)
+        new_posts = self.filter_old(posts)
+        # If any are new, we want to send an email with all the new posts
+        if new_posts:
+            self.send_email(new_posts)
+        # Regardless, write all of the filtered posts to the history file for next time
+        self.save_history(posts)
+            
     def parse_search_results(self, search_results):
-        '''Parse the search results into a list of dictionaries representing the post'''
+        '''Parse the search results into a list of links'''
         soup = BeautifulSoup(search_results)
         ps = soup.find_all('p', {'class':'row'})
-        posts = []
+        links = []
         for p in ps:
-            links = p.find_all('a')
-            for link in links:
-                if not link.has_attr('class'):
-                    post = {}
-                    post['link'] = self.base_url + link.get('href')
-                    post['title'] = link.get_text()
+            _as = p.find_all('a')
+            for a in _as:
+                if not a.has_attr('class'):
                     # filter out any non-local posts
                     # local posts will have a relative URL like:
                     #   '/tag/4460564352.html'
                     # but 'nearby' posts will have a full URL like:
                     #   'http://greensboro.craigslist.org/tag/4519759135.html'
-                    if 'http' not in link.get('href'):
-                        posts.append(post)
-        return posts
+                    if 'http' not in a.get('href'):
+                        links.append(self.base_url + a.get('href'))
+        return links
 
     def parse_post(self, url):
         '''Parse an individual post'''
@@ -61,12 +78,35 @@ class Craigslist():
         id = self.url_to_id(url)
         title = soup.title.text
         description = self.extract_description(soup.find_all('meta', {'name':'description'}))
-        return Post(id, title, description)
+        return Post(id, title, description, url)
 
-    def is_duplicate(self, link):
-        '''Returns True if the post already exists within the database,
-           Returns False otherwise'''
-        return False
+    def filter_blacklist(self, posts):
+        filtered_posts = []
+        for post in posts:
+            if not self.blacklist in post.title:
+                filtered_posts.append(post)
+        return filtered_posts
+
+    def filter_old(self, posts):
+        filtered_posts = []
+        for post in posts:
+            if not post.id in self.history:
+                filtered_posts.append(post)
+        return filtered_posts
+
+    def send_email(self, posts):
+        # temp -- no email yet
+        for p in posts:
+            print(p.link)
+            print(p.title)
+            print(p.description)
+            print()
+
+    def save_history(self, posts):
+        with open(self.history_filename, 'w') as f:
+            for p in posts:
+                f.write(p.link)
+        
 
     def url_to_id(self, url):
         '''URL is of the form: http://raleigh.craigslist.org/tag/4554496580.html
@@ -91,10 +131,11 @@ class Craigslist():
 
 class Post():
     '''Represents an individual Craigslist post'''
-    def __init__(self, id, title, description):
+    def __init__(self, id, title, description, link):
         self.id = id
         self.title = title
         self.description = description
+        self.link = link
 
         
 def parse_args():
