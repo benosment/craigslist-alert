@@ -13,7 +13,8 @@ import requests
 import re
 from bs4 import BeautifulSoup
 import argparse
-
+import smtplib
+import os
 
 class Craigslist():
     def __init__(self, location, history='history', blacklist='blacklist'):
@@ -102,12 +103,22 @@ class Craigslist():
         return filtered_posts
 
     def send_email(self, posts):
-        # temp -- no email yet
+        body = ""
         for p in posts:
-            print(p.link)
-            print(p.title)
-            print(p.description)
-            print()
+            body += "%s\n%s\n%s\n\n" % (p.title, p.description, p.link)
+        gmail_user = os.environ.get('MAIL_USERNAME')
+        gmail_password = os.environ.get('MAIL_PASSWORD')
+        subject = 'Craigslist Alert'
+        message = 'From: %s\nTo: %s\nSubject: %s\n\n%s' % (gmail_user, gmail_user, subject, body)
+        try:
+            server = smtplib.SMTP('smtp.gmail.com', 587)
+            server.ehlo()
+            server.starttls()
+            server.login(gmail_user, gmail_password)
+            server.sendmail(gmail_user, gmail_user, message)
+            server.close()
+        except:
+            print("Failed to send mail")
 
     def save_history(self, posts):
         with open(self.history_filename, 'w') as f:
@@ -157,8 +168,6 @@ def parse_args():
                         action='store', required=False, default='raleigh')
     parser.add_argument('--category', help='what category to search?',
                         action='store', required=False, default='taa')
-    parser.add_argument('--db', help='which database to use?',
-                        action='store', required=False, default='results.db')
     return parser.parse_args()
 
 
